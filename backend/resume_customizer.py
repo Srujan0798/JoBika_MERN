@@ -282,18 +282,19 @@ class SkillGapAnalyzer:
     
     def _get_learning_resources(self, skill: str) -> List[str]:
         """Get free learning resources for skill"""
-        resources_map = {
-            'python': ['Python.org Official Tutorial', 'Automate the Boring Stuff (Free Book)', 'Python for Everybody (Coursera)'],
-            'javascript': ['MDN Web Docs', 'JavaScript.info', 'freeCodeCamp JavaScript Course'],
-            'react': ['React Official Docs', 'freeCodeCamp React Course', 'React Tutorial for Beginners'],
-            'node.js': ['Node.js Official Docs', 'Node.js Tutorial', 'freeCodeCamp Node.js Course'],
-            'sql': ['SQLBolt', 'W3Schools SQL Tutorial', 'Khan Academy SQL'],
-            'aws': ['AWS Free Tier', 'AWS Training', 'freeCodeCamp AWS Course'],
-            'docker': ['Docker Official Docs', 'Docker Tutorial for Beginners', 'Play with Docker'],
-            'git': ['Git Official Docs', 'GitHub Learning Lab', 'Atlassian Git Tutorial']
-        }
+        # Import here to avoid circular imports if any
+        from learning_recommendations import get_learning_resources
         
-        return resources_map.get(skill, ['Search for online courses', 'Practice with projects', 'Read official documentation'])
+        resources = get_learning_resources(skill)
+        # Convert to list of strings for backward compatibility if needed, 
+        # or return the structured objects. The frontend expects strings in the current implementation,
+        # so let's format them nicely.
+        
+        formatted_resources = []
+        for r in resources:
+            formatted_resources.append(f"{r['title']} ({r['type']})")
+            
+        return formatted_resources
     
     def _estimate_learning_time(self, skill: str) -> str:
         """Estimate time to learn skill"""

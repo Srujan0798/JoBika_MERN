@@ -55,6 +55,7 @@ function initApp() {
     if (AppState.token) {
         loadJobs();
         loadApplications();
+        loadAnalytics();
     }
 }
 
@@ -210,6 +211,78 @@ async function loadApplications() {
         // Fallback to mock data
         loadMockApplications();
         return AppState.applications;
+    }
+}
+
+async function loadAnalytics() {
+    try {
+        const data = await apiCall('/analytics');
+        renderAnalytics(data);
+        return data;
+    } catch (error) {
+        console.error('Failed to load analytics:', error);
+        // Fallback UI
+        document.getElementById('analytics-chart').innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400">No data available</div>';
+        document.getElementById('market-insights').innerHTML = '<div class="w-full text-center text-gray-400">No insights available</div>';
+    }
+}
+
+function renderAnalytics(data) {
+    // Render User Stats
+    if (data.userStats) {
+        document.getElementById('total-applications').textContent = data.userStats.total || 0;
+
+        // Calculate response rate (interviews / applications)
+        const interviews = data.userStats.breakdown?.interview || 0;
+        const offers = data.userStats.breakdown?.offer || 0;
+        const total = data.userStats.total || 1;
+        const rate = Math.round(((interviews + offers) / total) * 100);
+
+        document.getElementById('total-interviews').textContent = interviews;
+        document.getElementById('total-offers').textContent = offers;
+        document.getElementById('response-rate').textContent = `${rate}%`;
+
+        // Render Chart (Simple CSS Bars)
+        const chartContainer = document.getElementById('analytics-chart');
+        if (data.userStats.timeline && data.userStats.timeline.counts.length > 0) {
+            const maxCount = Math.max(...data.userStats.timeline.counts, 1);
+
+            chartContainer.innerHTML = data.userStats.timeline.counts.map((count, index) => {
+                const height = (count / maxCount) * 100;
+                const date = new Date(data.userStats.timeline.dates[index]).toLocaleDateString('en-US', { weekday: 'short' });
+                return `
+                    <div class="flex flex-col items-center flex-1 group">
+                        <div class="w-full bg-blue-100 rounded-t-sm relative hover:bg-blue-200 transition-all" style="height: ${height}%">
+                            <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                ${count} apps
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2">${date}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    // Render Market Insights
+    if (data.marketInsights && data.marketInsights.top_skills) {
+        const insightsContainer = document.getElementById('market-insights');
+        const maxCount = Math.max(...data.marketInsights.top_skills.map(s => s.count), 1);
+
+        insightsContainer.innerHTML = data.marketInsights.top_skills.map(skill => {
+            const width = (skill.count / maxCount) * 100;
+            return `
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-gray-700">${skill.name}</span>
+                        <span class="text-gray-500">${skill.count} jobs</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: ${width}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 }
 

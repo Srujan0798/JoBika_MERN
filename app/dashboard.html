@@ -283,97 +283,76 @@
                     <div>
                         <div class="stat-value">142</div>
                         <div class="stat-label">Total Applications</div>
-                    </div>
-                    <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary-blue);">📨
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value">2</div>
+                                <div class="stat-label">Offers Received</div>
+                            </div>
+                            <div class="stat-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--success);">🎉
+                            </div>
+                        </div>
+                        <div class="stat-trend">Congratulations!</div>
                     </div>
                 </div>
-                <div class="stat-trend">↑ 12% from last month</div>
-            </div>
 
-            <div class="stat-card">
-                <div class="stat-header">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
                     <div>
-                        <div class="stat-value">23</div>
-                        <div class="stat-label">Active Applications</div>
-                    </div>
-                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">⏳</div>
-                </div>
-                <div class="stat-trend">5 responses this week</div>
-            </div>
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h2 style="font-size: 1.5rem; font-weight: 600;">Recommended Jobs</h2>
+                            <a href="jobs.html"
+                                style="color: var(--primary-blue); text-decoration: none; font-weight: 500;">View All
+                                →</a>
+                        </div>
 
-            <div class="stat-card">
-                <div class="stat-header">
+                        <div id="jobsList"></div>
+                    </div>
+
                     <div>
-                        <div class="stat-value">8</div>
-                        <div class="stat-label">Interviews Scheduled</div>
-                    </div>
-                    <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--primary-purple);">🎯
-                    </div>
-                </div>
-                <div class="stat-trend">3 this week</div>
-            </div>
+                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem;">Recent Activity</h2>
+                        <div class="card" style="padding: 1rem;">
+                            <div
+                                style="display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--gray-200);">
+                                <div
+                                    style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-top: 0.5rem;">
+                                </div>
+                                <div>
+                                    <p style="font-weight: 500; margin-bottom: 0.25rem;">Interview scheduled</p>
+                                    <p style="font-size: 0.875rem; color: var(--gray-600);">Google India - Senior
+                                        Developer</p>
+                                    <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.25rem;">2 hours
+                                        ago</p>
+                                </div>
+                            </div>
 
-            <div class="stat-card">
-                <div class="stat-header">
-                    <div>
-                        <div class="stat-value">2</div>
-                        <div class="stat-label">Offers Received</div>
-                    </div>
-                    <div class="stat-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--success);">🎉</div>
-                </div>
-                <div class="stat-trend">Congratulations!</div>
-            </div>
-        </div>
+                            <div
+                                style="display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--gray-200);">
+                                <div
+                                    style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-blue); margin-top: 0.5rem;">
+                                </div>
+                                <div>
+                                    <p style="font-weight: 500; margin-bottom: 0.25rem;">Application submitted</p>
+                                    <p style="font-size: 0.875rem; color: var(--gray-600);">Amazon - Backend Engineer
+                                    </p>
+                                    <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.25rem;">5 hours
+                                        ago</p>
+                                </div>
+                            </div>
 
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2 style="font-size: 1.5rem; font-weight: 600;">Recommended Jobs</h2>
-                    <a href="jobs.html"
-                        style="color: var(--primary-blue); text-decoration: none; font-weight: 500;">View All →</a>
-                </div>
-
-                <div id="jobsList"></div>
-            </div>
-
-            <div>
-                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem;">Recent Activity</h2>
-                <div class="card" style="padding: 1rem;">
-                    <div style="display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--gray-200);">
-                        <div
-                            style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-top: 0.5rem;">
-                        </div>
-                        <div>
-                            <p style="font-weight: 500; margin-bottom: 0.25rem;">Interview scheduled</p>
-                            <p style="font-size: 0.875rem; color: var(--gray-600);">Google India - Senior Developer</p>
-                            <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.25rem;">2 hours ago</p>
-                        </div>
-                    </div>
-
-                    <div style="display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--gray-200);">
-                        <div
-                            style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-blue); margin-top: 0.5rem;">
-                        </div>
-                        <div>
-                            <p style="font-weight: 500; margin-bottom: 0.25rem;">Application submitted</p>
-                            <p style="font-size: 0.875rem; color: var(--gray-600);">Amazon - Backend Engineer</p>
-                            <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.25rem;">5 hours ago</p>
-                        </div>
-                    </div>
-
-                    <div style="display: flex; gap: 1rem; padding: 1rem 0;">
-                        <div
-                            style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning); margin-top: 0.5rem;">
-                        </div>
-                        <div>
-                            <p style="font-weight: 500; margin-bottom: 0.25rem;">Profile viewed</p>
-                            <p style="font-size: 0.875rem; color: var(--gray-600);">Microsoft recruiter</p>
-                            <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.25rem;">1 day ago</p>
+                            <div style="display: flex; gap: 1rem; padding: 1rem 0;">
+                                <div
+                                    style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning); margin-top: 0.5rem;">
+                                </div>
+                                <div>
+                                    <p style="font-weight: 500; margin-bottom: 0.25rem;">Profile viewed</p>
+                                    <p style="font-size: 0.875rem; color: var(--gray-600);">Microsoft recruiter</p>
+                                    <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.25rem;">1 day
+                                        ago</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
     </main>
 
     <script src="assets/js/app.js"></script>

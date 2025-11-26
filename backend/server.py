@@ -26,6 +26,8 @@ from email_service import (
 )
 from resume_customizer import ResumeCustomizer, SkillGapAnalyzer
 from job_scraper_universal import UniversalJobScraper, AutoApplySystem
+from analytics import get_application_stats, get_market_insights
+from learning_recommendations import get_recommendations_for_gaps, get_learning_resources
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -673,6 +675,48 @@ def get_applications():
             })
         
         return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============= ANALYTICS & LEARNING ENDPOINTS =============
+
+@app.route('/api/analytics', methods=['GET'])
+def get_analytics():
+    """Get user analytics and market insights"""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        user_id = verify_token(token)
+        
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        # Get user stats
+        user_stats = get_application_stats(user_id)
+        
+        # Get market insights
+        market_insights = get_market_insights()
+        
+        return jsonify({
+            'userStats': user_stats,
+            'marketInsights': market_insights
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/learning/recommendations', methods=['GET'])
+def get_learning_recs():
+    """Get learning recommendations for skills"""
+    try:
+        skills = request.args.get('skills', '').split(',')
+        skills = [s.strip() for s in skills if s.strip()]
+        
+        if not skills:
+            return jsonify([])
+            
+        recommendations = get_recommendations_for_gaps(skills)
+        return jsonify(recommendations)
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
