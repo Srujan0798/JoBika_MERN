@@ -19,7 +19,7 @@ from resume_parser import (
     extract_skills, extract_experience_years, enhance_resume_text,
     calculate_match_score, generate_skill_recommendations
 )
-from job_scraper import scrape_jobs, extract_skills_from_job
+from job_scraper import scrape_all_jobs, extract_skills_from_job
 from email_service import (
     init_mail, send_welcome_email, send_application_confirmation,
     send_job_alert, send_skill_recommendation_email
@@ -66,7 +66,7 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
         full_name TEXT,
         phone TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -158,7 +158,7 @@ def register():
         # Create user
         hashed_password = hash_password(password)
         cursor.execute('''
-            INSERT INTO users (email, password, full_name, phone)
+            INSERT INTO users (email, password_hash, full_name, phone)
             VALUES (?, ?, ?, ?)
         ''', (email, hashed_password, full_name, phone))
         conn.commit()
@@ -168,7 +168,7 @@ def register():
         token = jwt.encode({
             'user_id': user_id,
             'email': email,
-            'exp': datetime.datetime.utcnow() + datetime.datetime.timedelta(days=7)
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
         }, SECRET_KEY, algorithm='HS256')
         
         # Send welcome email
@@ -211,7 +211,7 @@ def login():
         cursor.execute('''
             SELECT id, email, full_name, phone
             FROM users
-            WHERE email = ? AND password = ?
+            WHERE email = ? AND password_hash = ?
         ''', (email, hashed_password))
         
         user = cursor.fetchone()
@@ -224,7 +224,7 @@ def login():
         token = jwt.encode({
             'user_id': user['id'],
             'email': user['email'],
-            'exp': datetime.datetime.utcnow() + datetime.datetime.timedelta(days=7)
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
         }, SECRET_KEY, algorithm='HS256')
         
         return jsonify({
