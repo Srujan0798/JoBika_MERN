@@ -65,5 +65,5 @@ logs/
 .coverage
 htmlcov/
 
-# Node modules (if using frontend build tools)
+# Node modules ( if using frontend build tools)
 node_modules/
