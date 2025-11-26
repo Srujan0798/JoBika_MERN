@@ -50,7 +50,7 @@ JoBika is a **complete AI job agent** that helps you find and apply to jobs glob
 
 ```bash
 # Clone repository
-git clone https://github.com/Srujan0798/JoBika.git
+git clone <your-repo-url>
 cd JoBika
 
 # Install dependencies
@@ -161,8 +161,8 @@ JoBika/
 │   └── PITCH_DECK.md
 │
 ├── README.md                     # This file
-├── TESTING_COMPLETE.md          # Test results ⭐
-└── PROJECT_STATUS.md            # Current status ⭐
+├── docs/TESTING_COMPLETE.md          # Test results ⭐
+└── docs/PROJECT_STATUS.md            # Current status ⭐
 ```
 
 ---
@@ -196,7 +196,7 @@ POST http://localhost:5000/api/jobs/scrape
 ```
 
 ### **Test Results**
-See `TESTING_COMPLETE.md` for comprehensive test results.
+See `docs/TESTING_COMPLETE.md` for comprehensive test results.
 
 **Summary**:
 - ✅ All API endpoints working
@@ -239,18 +239,6 @@ JoBika finds jobs **globally**, not limited to one country:
 ---
 
 ## 🔧 Configuration
-
-### **Email Setup** (Optional)
-```bash
-# Set environment variables
-export GMAIL_USER=your-email@gmail.com
-export GMAIL_APP_PASSWORD=your-app-password
-```
-
-### **Database**
-- **Local**: SQLite (auto-created)
-- **Production**: PostgreSQL (configure in server.py)
-
 ---
 
 ## 📊 API Endpoints
@@ -309,15 +297,15 @@ git push origin main
 # Deploy via Render dashboard
 ```
 
-See `DEPLOYMENT_GUIDE.md` for detailed instructions.
+See `docs/DEPLOYMENT_GUIDE.md` for detailed instructions.
 
 ---
 
 ## 📝 Documentation
 
 - `README.md` - This file
-- `TESTING_COMPLETE.md` - Test results
-- `PROJECT_STATUS.md` - Current status
+- `docs/TESTING_COMPLETE.md` - Test results
+- `docs/PROJECT_STATUS.md` - Current status
 - `docs/ARCHITECTURE.md` - Technical architecture
 - `docs/DESIGN_SYSTEM.md` - UI/UX design system
 - `backend/README.md` - Backend documentation
