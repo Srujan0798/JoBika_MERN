@@ -50,7 +50,7 @@ JoBika is a **complete AI job agent** that helps you find and apply to jobs glob
 
 ```bash
 # Clone repository
-git clone <your-repo-url>
+git clone https://github.com/Srujan0798/JoBika.git
 cd JoBika
 
 # Install dependencies
