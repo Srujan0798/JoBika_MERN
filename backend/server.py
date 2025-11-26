@@ -19,6 +19,7 @@ import io
 import base64
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from authlib.integrations.flask_client import OAuth
 
 # Import custom modules
 from resume_parser import (
@@ -45,6 +46,36 @@ limiter = Limiter(
     app=app,
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://"
+)
+
+# Initialize OAuth
+oauth = OAuth(app)
+
+# Google OAuth
+oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    access_token_url='https://accounts.google.com/o/oauth2/token',
+    access_token_params=None,
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+    authorize_params=None,
+    api_base_url='https://www.googleapis.com/oauth2/v1/',
+    userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',
+    client_kwargs={'scope': 'openid email profile'},
+)
+
+# LinkedIn OAuth
+oauth.register(
+    name='linkedin',
+    client_id=os.environ.get('LINKEDIN_CLIENT_ID'),
+    client_secret=os.environ.get('LINKEDIN_CLIENT_SECRET'),
+    access_token_url='https://www.linkedin.com/oauth/v2/accessToken',
+    access_token_params=None,
+    authorize_url='https://www.linkedin.com/oauth/v2/authorization',
+    authorize_params=None,
+    api_base_url='https://api.linkedin.com/v2/',
+    client_kwargs={'scope': 'r_liteprofile r_emailaddress'},
 )
 
 # Configuration
@@ -88,6 +119,8 @@ def init_db():
         phone TEXT,
         two_factor_secret TEXT,
         is_two_factor_enabled BOOLEAN DEFAULT 0,
+        oauth_provider TEXT,
+        oauth_id TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
@@ -293,6 +326,79 @@ def login():
                 'isTwoFactorEnabled': bool(user['is_two_factor_enabled'])
             }
         })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/auth/<provider>')
+def oauth_login(provider):
+    """Initiate OAuth login"""
+    client = oauth.create_client(provider)
+    redirect_uri = url_for('oauth_callback', provider=provider, _external=True)
+    return client.authorize_redirect(redirect_uri)
+
+@app.route('/api/auth/<provider>/callback')
+def oauth_callback(provider):
+    """Handle OAuth callback"""
+    try:
+        client = oauth.create_client(provider)
+        token = client.authorize_access_token()
+        
+        if provider == 'google':
+            user_info = client.userinfo()
+            email = user_info['email']
+            name = user_info['name']
+            oauth_id = user_info['sub']
+        elif provider == 'linkedin':
+            resp = client.get('me')
+            profile = resp.json()
+            oauth_id = profile['id']
+            name = f"{profile['localizedFirstName']} {profile['localizedLastName']}"
+            
+            email_resp = client.get('emailAddress?q=members&projection=(elements*(handle~))')
+            email = email_resp.json()['elements'][0]['handle~']['emailAddress']
+            
+        # Check if user exists
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+        user = cursor.fetchone()
+        
+        if not user:
+            # Create new user
+            cursor.execute('''
+                INSERT INTO users (email, password_hash, full_name, oauth_provider, oauth_id)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (email, 'oauth_user', name, provider, oauth_id))
+            conn.commit()
+            user_id = cursor.lastrowid
+            
+            # Send welcome email
+            try:
+                send_welcome_email(email, name)
+            except:
+                pass
+                
+            user = {'id': user_id, 'email': email, 'full_name': name, 'is_two_factor_enabled': 0}
+        else:
+            # Update OAuth info if missing
+            if not user['oauth_id']:
+                cursor.execute('''
+                    UPDATE users SET oauth_provider = ?, oauth_id = ?
+                    WHERE id = ?
+                ''', (provider, oauth_id, user['id']))
+                conn.commit()
+        
+        # Generate JWT
+        token = jwt.encode({
+            'user_id': user['id'],
+            'email': email,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
+        }, SECRET_KEY, algorithm='HS256')
+        
+        # Redirect to frontend with token
+        return redirect(f'http://localhost:5500/app/upload.html?token={token}&user={json.dumps(user)}')
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
