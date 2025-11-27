@@ -1,40 +1,7 @@
 require('dotenv').config();
 const { Sequelize } = require('sequelize');
 
-const dns = require('dns');
-const { URL } = require('url');
 
-// Function to resolve hostname to IPv4
-async function resolveToIPv4(connectionString) {
-  if (!connectionString) return connectionString;
-
-  try {
-    const url = new URL(connectionString);
-    const hostname = url.hostname;
-
-    // Check if it's already an IP
-    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) return connectionString;
-
-    return new Promise((resolve) => {
-      dns.resolve4(hostname, (err, addresses) => {
-        if (err || !addresses || addresses.length === 0) {
-          console.warn(`⚠️ Could not resolve ${hostname} to IPv4, using original`);
-          resolve(connectionString);
-        } else {
-          console.log(`✅ Resolved ${hostname} to IPv4: ${addresses[0]}`);
-          url.hostname = addresses[0];
-          resolve(url.toString());
-        }
-      });
-    });
-  } catch (e) {
-    return connectionString;
-  }
-}
-
-// Wrap config creation in a function or promise?
-// Sequelize config is synchronous usually.
-// But we can resolve it before creating the instance.
 
 const config = {
   development: {
@@ -106,20 +73,35 @@ if (require('dns').setDefaultResultOrder) {
   require('dns').setDefaultResultOrder('ipv4first');
 }
 
+const commonOptions = {
+  dialect: dbConfig.dialect,
+  logging: dbConfig.logging,
+  pool: dbConfig.pool,
+  dialectOptions: dbConfig.dialectOptions || {},
+  hooks: {
+    beforeConnect: async (config) => {
+      // Force IPv4 resolution for Supabase to avoid ENETUNREACH
+      if (config.host && !/^(\d{1,3}\.){3}\d{1,3}$/.test(config.host)) {
+        try {
+          const addresses = await dns.promises.resolve4(config.host);
+          if (addresses && addresses.length > 0) {
+            console.log(`✅ Resolved ${config.host} to ${addresses[0]}`);
+            config.host = addresses[0];
+          }
+        } catch (err) {
+          console.warn(`⚠️ Failed to resolve ${config.host} to IPv4:`, err.message);
+        }
+      }
+    }
+  }
+};
+
 if (dbConfig.url) {
-  sequelize = new Sequelize(dbConfig.url, {
-    dialect: dbConfig.dialect,
-    logging: dbConfig.logging,
-    pool: dbConfig.pool,
-    dialectOptions: dbConfig.dialectOptions || {}
-  });
+  sequelize = new Sequelize(dbConfig.url, commonOptions);
 } else {
   sequelize = new Sequelize({
-    dialect: dbConfig.dialect,
+    ...commonOptions,
     storage: dbConfig.storage,
-    logging: dbConfig.logging,
-    pool: dbConfig.pool,
-    dialectOptions: dbConfig.dialectOptions || {}
   });
 }
 
