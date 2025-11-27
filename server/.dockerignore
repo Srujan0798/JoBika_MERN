@@ -1,0 +1,18 @@
+# .dockerignore
+node_modules
+npm-debug.log
+.env
+.env.*
+.git
+.gitignore
+coverage
+.nyc_output
+logs
+*.log
+.DS_Store
+.vscode
+.idea
+README.md
+*.md
+tests
+.github

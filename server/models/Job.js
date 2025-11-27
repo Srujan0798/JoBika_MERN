@@ -4,10 +4,12 @@ const JobSchema = new mongoose.Schema({
     title: {
         type: String,
         required: true,
+        trim: true,
     },
     company: {
         type: String,
         required: true,
+        trim: true,
     },
     location: {
         type: String,
@@ -24,8 +26,17 @@ const JobSchema = new mongoose.Schema({
         required: true,
     },
     source: {
-        type: String, // 'linkedin', 'indeed', etc.
+        type: String, // 'linkedin', 'indeed', 'naukri', 'unstop'
         required: true,
+        enum: ['linkedin', 'indeed', 'naukri', 'unstop', 'other'],
+    },
+    requiredSkills: {
+        type: [String],
+        default: [],
+    },
+    postedDate: {
+        type: String,
+        default: 'Recently',
     },
     matchScore: {
         type: Number,
@@ -35,6 +46,10 @@ const JobSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-});
+}, { timestamps: true });
+
+// Index for faster searches
+JobSchema.index({ title: 'text', company: 'text', description: 'text' });
+JobSchema.index({ location: 1, source: 1 });
 
 module.exports = mongoose.model('Job', JobSchema);
