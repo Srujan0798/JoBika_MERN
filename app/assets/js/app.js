@@ -1,5 +1,7 @@
 // API Configuration
-const API_BASE_URL = 'http://localhost:5000/api';
+// API Configuration
+// Use relative path since we're serving frontend from the same server
+const API_BASE_URL = '/api';
 
 // Global app state
 const AppState = {
@@ -227,8 +229,13 @@ async function loadApplications() {
 async function loadAnalytics() {
     try {
         const data = await apiCall('/analytics');
-        renderAnalytics(data);
-        return data;
+        // Map backend response to frontend expectation
+        const mappedData = {
+            userStats: data.applicationStats,
+            marketInsights: data.marketInsights
+        };
+        renderAnalytics(mappedData);
+        return mappedData;
     } catch (error) {
         console.error('Failed to load analytics:', error);
         // Fallback UI
@@ -422,7 +429,9 @@ function requireAuth() {
 // Notification Functions
 async function loadNotifications() {
     try {
-        const notifications = await apiCall('/notifications');
+        const response = await apiCall('/notifications');
+        // Handle object response { notifications: [], unreadCount: 0 }
+        const notifications = response.notifications || [];
         renderNotifications(notifications);
         return notifications;
     } catch (error) {

@@ -1,7 +1,5 @@
-const Job = require('../models/Job');
-const Application = require('../models/Application');
-const UserPreference = require('../models/UserPreference');
-const Resume = require('../models/Resume');
+const { Job, Application, UserPreference, Resume, User } = require('../models');
+const { Op } = require('sequelize');
 const { calculateMatchScore } = require('./resumeParser');
 const { sendApplicationConfirmation } = require('./emailService');
 
@@ -15,13 +13,17 @@ class AutoApplySystem {
     async processAutoApplyForUser(userId) {
         try {
             // Get user preferences
-            const preferences = await UserPreference.findOne({ user: userId });
+            const preferences = await UserPreference.findOne({ where: { userId } });
             if (!preferences || !preferences.autoApplyEnabled) {
                 return { success: false, message: 'Auto-apply not enabled' };
             }
 
             // Get user's resume
-            const resume = await Resume.findOne({ user: userId }).sort({ uploadedAt: -1 });
+            const resume = await Resume.findOne({
+                where: { userId },
+                order: [['uploadedAt', 'DESC']]
+            });
+
             if (!resume) {
                 return { success: false, message: 'No resume found' };
             }
@@ -50,7 +52,7 @@ class AutoApplySystem {
                     const application = await this.applyToJob(userId, job, resume);
                     applicationsCreated.push(application);
                 } catch (error) {
-                    console.error(`Failed to apply to job ${job._id}:`, error);
+                    console.error(`Failed to apply to job ${job.id}:`, error);
                 }
             }
 
@@ -70,20 +72,24 @@ class AutoApplySystem {
      * Find jobs matching user preferences
      */
     async findMatchingJobs(resume, preferences) {
-        const query = {};
+        const where = {};
 
         // Filter by location
         if (preferences.targetLocations && preferences.targetLocations.length > 0) {
-            query.location = { $in: preferences.targetLocations };
+            where.location = { [Op.in]: preferences.targetLocations };
         }
 
         // Filter by source
         if (preferences.preferredSources && preferences.preferredSources.length > 0) {
-            query.source = { $in: preferences.preferredSources };
+            where.source = { [Op.in]: preferences.preferredSources };
         }
 
         // Get jobs
-        const jobs = await Job.find(query).limit(100);
+        const jobs = await Job.findAll({
+            where,
+            limit: 100,
+            raw: true
+        });
 
         // Calculate match scores and filter
         const jobsWithScores = jobs.map(job => {
@@ -91,7 +97,7 @@ class AutoApplySystem {
                 resume.skills || [],
                 job.requiredSkills || []
             );
-            return { ...job.toObject(), matchScore };
+            return { ...job, matchScore };
         });
 
         // Filter by minimum match score
@@ -112,9 +118,11 @@ class AutoApplySystem {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const count = await Application.countDocuments({
-            user: userId,
-            appliedDate: { $gte: today },
+        const count = await Application.count({
+            where: {
+                userId,
+                appliedDate: { [Op.gte]: today },
+            }
         });
 
         return count;
@@ -126,8 +134,10 @@ class AutoApplySystem {
     async applyToJob(userId, job, resume) {
         // Check if already applied
         const existingApplication = await Application.findOne({
-            user: userId,
-            job: job._id,
+            where: {
+                userId,
+                jobId: job.id,
+            }
         });
 
         if (existingApplication) {
@@ -135,16 +145,14 @@ class AutoApplySystem {
         }
 
         // Create application
-        const application = new Application({
-            user: userId,
-            job: job._id,
-            resume: resume._id,
+        const application = await Application.create({
+            userId,
+            jobId: job.id,
+            resumeId: resume.id,
             status: 'applied',
             matchScore: job.matchScore,
             appliedDate: new Date(),
         });
-
-        await application.save();
 
         // Send confirmation email (async, don't wait)
         this.sendConfirmationEmail(userId, job).catch(err =>
@@ -158,8 +166,7 @@ class AutoApplySystem {
      * Send confirmation email
      */
     async sendConfirmationEmail(userId, job) {
-        const User = require('../models/User');
-        const user = await User.findById(userId);
+        const user = await User.findByPk(userId);
         if (user && user.email) {
             await sendApplicationConfirmation(
                 user.email,

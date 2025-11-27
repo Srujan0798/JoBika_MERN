@@ -5,27 +5,28 @@
  * Usage: node scripts/dbStats.js
  */
 
-const mongoose = require('mongoose');
+const { sequelize } = require('../config/database');
+const { User, Resume, Job, Application, Notification } = require('../models');
 require('dotenv').config();
 
-const User = require('../models/User');
-const Resume = require('../models/Resume');
-const Job = require('../models/Job');
-const Application = require('../models/Application');
-const Notification = require('../models/Notification');
+async function getTableStats(Model, name) {
+    const count = await Model.count();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/jobika';
-
-async function getCollectionStats(Model, name) {
-    const count = await Model.countDocuments();
-    const stats = await Model.collection.stats();
+    // Get table size from PostgreSQL
+    const tableName = Model.tableName;
+    const [sizeResult] = await sequelize.query(`
+        SELECT 
+            pg_size_pretty(pg_total_relation_size('${tableName}')) as total_size,
+            pg_size_pretty(pg_relation_size('${tableName}')) as table_size,
+            pg_size_pretty(pg_indexes_size('${tableName}')) as indexes_size
+    `);
 
     return {
         name,
         count,
-        size: (stats.size / 1024).toFixed(2) + ' KB',
-        avgObjSize: stats.avgObjSize ? (stats.avgObjSize / 1024).toFixed(2) + ' KB' : '0 KB',
-        indexes: stats.nindexes
+        totalSize: sizeResult[0]?.total_size || '0 bytes',
+        tableSize: sizeResult[0]?.table_size || '0 bytes',
+        indexesSize: sizeResult[0]?.indexes_size || '0 bytes'
     };
 }
 
@@ -33,14 +34,11 @@ async function showDatabaseStats() {
     try {
         console.log('📊 JoBika Database Statistics\n');
 
-        await mongoose.connect(MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-        console.log('✅ Connected to MongoDB\n');
+        await sequelize.authenticate();
+        console.log('✅ Connected to PostgreSQL (Supabase)\n');
 
-        // Get stats for each collection
-        const collections = [
+        // Get stats for each table
+        const tables = [
             { model: User, name: 'Users' },
             { model: Resume, name: 'Resumes' },
             { model: Job, name: 'Jobs' },
@@ -48,49 +46,60 @@ async function showDatabaseStats() {
             { model: Notification, name: 'Notifications' }
         ];
 
-        console.log('Collection Statistics:');
-        console.log('─'.repeat(70));
+        console.log('Table Statistics:');
+        console.log('─'.repeat(80));
         console.log(
-            'Collection'.padEnd(20) +
-            'Documents'.padEnd(15) +
-            'Size'.padEnd(15) +
-            'Avg Size'.padEnd(15) +
-            'Indexes'
+            'Table'.padEnd(20) +
+            'Rows'.padEnd(15) +
+            'Table Size'.padEnd(15) +
+            'Indexes Size'.padEnd(15) +
+            'Total Size'
         );
-        console.log('─'.repeat(70));
+        console.log('─'.repeat(80));
 
         let totalDocs = 0;
-        for (const { model, name } of collections) {
-            const stats = await getCollectionStats(model, name);
+        for (const { model, name } of tables) {
+            const stats = await getTableStats(model, name);
             totalDocs += stats.count;
 
             console.log(
                 stats.name.padEnd(20) +
                 stats.count.toString().padEnd(15) +
-                stats.size.padEnd(15) +
-                stats.avgObjSize.padEnd(15) +
-                stats.indexes.toString()
+                stats.tableSize.padEnd(15) +
+                stats.indexesSize.padEnd(15) +
+                stats.totalSize
             );
         }
 
-        console.log('─'.repeat(70));
-        console.log(`Total Documents: ${totalDocs}\n`);
+        console.log('─'.repeat(80));
+        console.log(`Total Rows: ${totalDocs}\n`);
 
         // Database size
-        const dbStats = await mongoose.connection.db.stats();
-        console.log('Database Information:');
-        console.log(`  Database Name: ${dbStats.db}`);
-        console.log(`  Total Size: ${(dbStats.dataSize / 1024 / 1024).toFixed(2)} MB`);
-        console.log(`  Storage Size: ${(dbStats.storageSize / 1024 / 1024).toFixed(2)} MB`);
-        console.log(`  Number of Collections: ${dbStats.collections}`);
-        console.log(`  Number of Indexes: ${dbStats.indexes}\n`);
+        const [dbSizeResult] = await sequelize.query(`
+            SELECT 
+                pg_database.datname as database_name,
+                pg_size_pretty(pg_database_size(pg_database.datname)) as size
+            FROM pg_database
+            WHERE datname = current_database()
+        `);
 
-        // Recent activity
-        const recentApps = await Application.countDocuments({
-            createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+        console.log('Database Information:');
+        console.log(`  Database Name: ${dbSizeResult[0]?.database_name || 'N/A'}`);
+        console.log(`  Total Size: ${dbSizeResult[0]?.size || 'N/A'}\n`);
+
+        // Recent activity (last 7 days)
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+        const recentApps = await Application.count({
+            where: {
+                createdAt: { [sequelize.Op.gte]: sevenDaysAgo }
+            }
         });
-        const recentJobs = await Job.countDocuments({
-            createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+
+        const recentJobs = await Job.count({
+            where: {
+                createdAt: { [sequelize.Op.gte]: sevenDaysAgo }
+            }
         });
 
         console.log('Recent Activity (Last 7 days):');
@@ -98,39 +107,55 @@ async function showDatabaseStats() {
         console.log(`  New Jobs: ${recentJobs}\n`);
 
         // Top users by applications
-        const topUsers = await Application.aggregate([
-            { $group: { _id: '$user', count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'user'
-                }
-            },
-            { $unwind: '$user' },
-            { $project: { email: '$user.email', fullName: '$user.fullName', count: 1 } }
-        ]);
+        const topUsers = await Application.findAll({
+            attributes: [
+                'userId',
+                [sequelize.fn('COUNT', sequelize.col('Application.id')), 'count']
+            ],
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['email', 'fullName']
+            }],
+            group: ['userId', 'user.id'],
+            order: [[sequelize.fn('COUNT', sequelize.col('Application.id')), 'DESC']],
+            limit: 5,
+            raw: true,
+            nest: true
+        });
 
         if (topUsers.length > 0) {
             console.log('Top 5 Most Active Users:');
-            topUsers.forEach((user, i) => {
-                console.log(`  ${i + 1}. ${user.fullName || user.email} - ${user.count} applications`);
+            topUsers.forEach((row, i) => {
+                const name = row.user?.fullName || row.user?.email || 'Unknown';
+                console.log(`  ${i + 1}. ${name} - ${row.count} applications`);
             });
             console.log('');
         }
 
         // Index information
-        console.log('Index Usage:');
-        const indexStats = await Job.collection.stats();
-        if (indexStats.indexSizes) {
-            Object.entries(indexStats.indexSizes).forEach(([name, size]) => {
-                console.log(`  ${name}: ${(size / 1024).toFixed(2)} KB`);
+        const [indexInfo] = await sequelize.query(`
+            SELECT 
+                schemaname,
+                tablename,
+                indexname,
+                pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+            FROM pg_indexes
+            JOIN pg_class ON pg_class.relname = indexname
+            WHERE schemaname = 'public'
+            ORDER BY pg_relation_size(indexrelid) DESC
+            LIMIT 10
+        `);
+
+        if (indexInfo.length > 0) {
+            console.log('Top 10 Largest Indexes:');
+            indexInfo.forEach(idx => {
+                console.log(`  ${idx.tablename}.${idx.indexname}: ${idx.index_size}`);
             });
+            console.log('');
         }
 
+        await sequelize.close();
         process.exit(0);
     } catch (error) {
         console.error('❌ Error:', error.message);

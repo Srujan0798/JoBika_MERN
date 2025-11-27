@@ -77,12 +77,15 @@ app.get('/api/health', (req, res) => {
 app.use('/uploads', express.static('uploads'));
 
 // Serve frontend (if running in production)
-if (config.NODE_ENV === 'production') {
-    app.use(express.static('../app'));
-    app.get('*', (req, res) => {
-        res.sendFile('index.html', { root: '../app' });
-    });
-}
+// Serve frontend (in both dev and production for simplicity)
+app.use(express.static('../app'));
+app.get('*', (req, res) => {
+    // Exclude API routes from wildcard
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ msg: 'API endpoint not found' });
+    }
+    res.sendFile('index.html', { root: '../app' });
+});
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
