@@ -10,9 +10,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: jobika-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: EMAIL_USER
@@ -21,10 +19,3 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
-  
-databases:
-  - name: jobika-db
-    databaseName: jobika
-    user: jobika
-    plan: free
-    region: oregon
