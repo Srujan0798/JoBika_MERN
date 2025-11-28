@@ -22,8 +22,15 @@ async function start() {
                 const ip = addresses[0];
                 console.log(`✅ Resolved to IPv4: ${ip}`);
                 dbUrl.hostname = ip;
+
+                // Also switch to port 6543 (Supavisor) for better connectivity
+                if (dbUrl.port === '5432') {
+                    console.log('✅ Switching to Supavisor port 6543');
+                    dbUrl.port = '6543';
+                }
+
                 process.env.DATABASE_URL = dbUrl.toString();
-                console.log('✅ Updated DATABASE_URL with IPv4 address');
+                console.log('✅ Updated DATABASE_URL with IPv4 address and port 6543');
             } else {
                 console.warn('⚠️ No IPv4 addresses found, using original hostname');
             }
